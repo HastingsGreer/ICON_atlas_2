@@ -19,6 +19,10 @@ BATCH_SIZE = 4
 
 knee_network = OAI_knees_gradICON_model()
 
+knee_network.similarity = icon.LNCC(sigma=5)
+
+knee_network.regis_net.load_state_dict(torch.load("/playpen-raid1/tgreer/InverseConsistency/training_scripts/gradICON/results/lncc_knees_only_interpolated-2/knee_aligner_resi_net22800"), strict=False)
+
 knee_batch = torch.load("results/grab_batch/atlas_sample.pytorch")
 
 
@@ -35,14 +39,15 @@ optim = torch.optim.Adam(params, lr=0.08)
 
 for step in range(90):
     plt.imshow(atlas_exp[0, 0, 50].cpu().detach().numpy())
-    plt.savefig(footsteps.output_dir + "step" + str(step) + ".png")
+    plt.colorbar()
+    plt.savefig(footsteps.output_dir + "step" + f"{step:03}" + ".png")
     plt.clf()
     for _ in range(5):
         batch = torch.cat(random.choices(knee_batch, k=BATCH_SIZE), axis=0).cuda()
         optim.zero_grad()
         loss_obj = knee_network(atlas_exp, batch)
         # (torch.mean((batch - netGrad.warped_image_A)**2))
-        loss_obj.similarity_loss.backward()
+        loss_obj.all_loss.backward()
         optim.step()
         print(icon.losses.to_floats(loss_obj))
         write_stats(writer, loss_obj, 5 * step + _)
